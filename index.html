@@ -53,18 +53,19 @@
     .status-indicators {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.85rem;
       flex-wrap: wrap;
     }
 
     .room-pill {
-      background: rgba(0, 127, 241, 0.25);
+      background: rgba(0, 127, 241, 0.28);
       border: 1px solid var(--aqua);
       color: white;
-      padding: 0.22rem 0.65rem;
+      padding: 0.25rem 0.75rem;
       border-radius: 6px;
-      font-weight: 700;
-      letter-spacing: 0.4px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      cursor: pointer;
     }
 
     .dot-indicator {
@@ -86,9 +87,19 @@
     .dot-indicator.offline { color: #ff8fa3; }
     .dot-indicator.offline::before { background: #ff4d6d; }
 
+    .live-toast {
+      background: var(--aqua);
+      color: var(--prussian);
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.74rem;
+      display: none;
+    }
+
     .utility-actions {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.45rem;
       flex-wrap: wrap;
     }
 
@@ -509,7 +520,6 @@
       border-right: 1px solid rgba(167, 235, 255, 0.18);
     }
 
-    /* Encabezados agrupados de las 5 Habilidades del Manual (en paleta formal) */
     .grp-conocimiento { background: #002247 !important; color: #A7EBFF !important; text-align: center !important; border-bottom: 2px solid #00CBFF; }
     .grp-comunicacion { background: #00386e !important; color: #ffffff !important; text-align: center !important; border-bottom: 2px solid #007FF1; }
     .grp-negociacion  { background: #005288 !important; color: #A7EBFF !important; text-align: center !important; border-bottom: 2px solid #00CBFF; }
@@ -548,7 +558,6 @@
       color: var(--prussian);
     }
 
-    /* Casillas numéricas compactas para los 12 subcriterios */
     .score-cell-input {
       width: 52px;
       padding: 0.4rem 0.2rem;
@@ -623,7 +632,7 @@
     .att-btn.active-p { background: var(--azure); color: white; }
     .att-btn.active-a { background: var(--absent-red); color: white; }
 
-    /* ================= MODAL PANTALLA COMPLETA Y CONFIG ================= */
+    /* ================= MODAL PANTALLA COMPLETA Y SALAS ================= */
     .fullscreen-overlay {
       display: none;
       position: fixed;
@@ -647,7 +656,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 24, 51, 0.75);
+      background: rgba(0, 24, 51, 0.82);
       z-index: 9000;
       justify-content: center;
       align-items: center;
@@ -656,27 +665,41 @@
     .modal-box.open { display: flex; }
     .modal-content {
       background: white;
-      border-radius: 12px;
-      max-width: 580px;
+      border-radius: 14px;
+      max-width: 540px;
       width: 100%;
-      padding: 1.5rem;
+      padding: 1.6rem;
       border-top: 5px solid var(--azure);
+    }
+
+    .room-code-big {
+      background: var(--prussian);
+      color: var(--aqua);
+      font-size: 1.85rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-align: center;
+      padding: 0.85rem;
+      border-radius: 10px;
+      margin: 0.75rem 0;
+      border: 2px solid var(--azure);
+      user-select: all;
     }
   </style>
 </head>
 <body>
 
-  <!-- BARRA SUPERIOR DE UTILIDADES Y SALA COMPARTIDA -->
+  <!-- BARRA SUPERIOR DE UTILIDADES Y SALA EN VIVO -->
   <div class="top-utility-bar">
     <div class="status-indicators">
-      <span class="room-pill" id="roomCodeBadge">SALA: MONUPE-0000</span>
-      <span class="dot-indicator" id="saveStatus">Guardado en memoria local</span>
-      <span class="dot-indicator" id="netStatus">En línea</span>
+      <span class="room-pill" id="roomCodeBadge" onclick="openRoomHub()" title="Clic para cambiar o compartir código de sala">SALA: MON-0000</span>
+      <span class="dot-indicator" id="saveStatus">Guardado automático</span>
+      <span class="dot-indicator" id="netStatus">Sincronización en vivo lista</span>
+      <span class="live-toast" id="liveUpdateToast">🔄 Actualizado por Mesa Directiva</span>
     </div>
     <div class="utility-actions">
-      <button class="btn btn-aqua" onclick="openShareModal()">🔗 Compartir Link de Mesa</button>
-      <button class="btn btn-azure" onclick="openModal('sheetsModal')">☁ Google Sheets (<span id="syncIndicator">Listo</span>)</button>
-      <button class="btn btn-outline-light" onclick="crearNuevaSala()">+ Nueva Sala</button>
+      <button class="btn btn-aqua" onclick="openRoomHub()">🔑 Sala / Unirse con Código</button>
+      <button class="btn btn-azure" onclick="syncNowManual()">🔄 Sincronizar Ahora</button>
       <button class="btn btn-outline-light" onclick="exportarJSON()">⬇ JSON</button>
       <label class="btn btn-outline-light" style="cursor:pointer;">
         ⬆ JSON
@@ -777,7 +800,7 @@
     <!-- ================= PESTAÑA 1: MESA, HORARIO Y PASE DE LISTA ================= -->
     <section class="tab-panel active" id="tab0">
       <div class="two-col-grid">
-        <!-- Configuración de Mesa -->
+        <!-- Configuración de Mesa con las 5 Comisiones y Tópicos Oficiales -->
         <div class="panel-card">
           <div class="panel-header">
             <span class="panel-title">🏛 Configuración de Mesa Directiva, Comisión y Tópico</span>
@@ -789,20 +812,19 @@
               <input type="text" id="cfgCentro" class="field-input" placeholder="Ej. Liceo Dr. Federico Henríquez y Carvajal" oninput="syncMeta()" />
             </div>
             <div class="field-group">
-              <label>Comisión / Comité *</label>
-              <select id="cfgComision" class="field-input" onchange="syncMeta()">
-                <option value="Asamblea General (AG)">Asamblea General (AG)</option>
-                <option value="Consejo de Seguridad (CS)">Consejo de Seguridad (CS)</option>
-                <option value="OMS — Organización Mundial de la Salud">OMS — Organización Mundial de la Salud</option>
-                <option value="UNICEF">UNICEF</option>
-                <option value="OEA">Organización de los Estados Americanos (OEA)</option>
-                <option value="PNUMA">Programa de la ONU para el Medio Ambiente (PNUMA)</option>
+              <label>Comisión / Comité Oficial *</label>
+              <select id="cfgComision" class="field-input" onchange="onCommissionChange()">
+                <option value="Asamblea General de las Naciones Unidas (AG)">1. Asamblea General de las Naciones Unidas (AG)</option>
+                <option value="Organización Mundial de la Salud (OMS)">2. Organización Mundial de la Salud (OMS)</option>
+                <option value="Programa de las Naciones Unidas para el Medio Ambiente (PNUMA)">3. Programa de las Naciones Unidas para el Medio Ambiente (PNUMA)</option>
+                <option value="Organización de las Naciones Unidas para la Educación, la Ciencia y la Cultura (UNESCO)">4. Organización de las Naciones Unidas para la Educación, la Ciencia y la Cultura (UNESCO)</option>
+                <option value="Consejo Económico y Social de las Naciones Unidas (ECOSOC)">5. Consejo Económico y Social de las Naciones Unidas (ECOSOC)</option>
               </select>
             </div>
           </div>
           <div class="field-group">
-            <label>Tópico / Tema de Agenda de la Comisión *</label>
-            <input type="text" id="cfgTopico" class="field-input" placeholder="Ej. El impacto de la Inteligencia Artificial en la educación y el empleo juvenil" oninput="syncMeta()" />
+            <label>Tópico Oficial de la Comisión (Se asigna automáticamente al elegir comisión) *</label>
+            <textarea id="cfgTopico" rows="2" class="field-input" style="resize:vertical;" oninput="syncMeta()"></textarea>
           </div>
           <div class="form-grid-2">
             <div class="field-group">
@@ -943,11 +965,10 @@
           </div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             <button class="btn btn-frosted" onclick="toggleTipsDrawer()">❓ Ver / Ocultar Guía de Criterios</button>
-            <button class="btn btn-azure" onclick="pullFromCloud(true)">🔄 Actualizar Sala</button>
+            <button class="btn btn-azure" onclick="syncNowManual()">🔄 Actualizar desde Vicepresidencia</button>
           </div>
         </div>
 
-        <!-- Guía Desplegable de las 5 Habilidades -->
         <div class="tips-drawer" id="tipsDrawer">
           <div class="tip-card-item">
             <strong>1. Habilidades de Conocimiento (28 pts)</strong>
@@ -971,11 +992,9 @@
           </div>
         </div>
 
-        <!-- Tabla Matricial con las 5 Habilidades y 12 Subcriterios Exactos -->
         <div class="table-container">
           <table>
             <thead>
-              <!-- Fila 1: Las 5 Habilidades Agrupadas -->
               <tr>
                 <th rowspan="2" class="sticky-col-1" style="width:36px; text-align:center;">#</th>
                 <th rowspan="2" class="sticky-col-2" style="min-width:185px;">Delegado/a y País</th>
@@ -986,7 +1005,6 @@
                 <th colspan="2" class="grp-interpers">Habilidades Interpersonales (18 pts)</th>
                 <th rowspan="2" style="text-align:center; width:76px;">TOTAL<br><small style="color:var(--aqua);">(100)</small></th>
               </tr>
-              <!-- Fila 2: Los 12 Subcriterios con sus valores máximos exactos -->
               <tr>
                 <th class="sub-header">Redacción<br><span style="color:var(--aqua);">(10)</span></th>
                 <th class="sub-header">Investigación<br><span style="color:var(--aqua);">(10)</span></th>
@@ -1055,7 +1073,7 @@
         <div class="form-grid-2" style="margin-top:0.5rem;">
           <div class="tip-card-item" style="border-left-color:var(--prussian); padding:1.1rem;">
             <strong style="font-size:0.95rem;">📥 Descargar Excel Oficial Formateado (.xls)</strong>
-            <p style="margin:0.45rem 0 0.9rem;">Genera el archivo Excel institucional con encabezados agrupados por las 5 áreas del manual, los 12 subcriterios detallados, datos de la sede, mesa directiva, menciones y clasificación MONUPE II.</p>
+            <p style="margin:0.45rem 0 0.9rem;">Genera el archivo Excel institucional con encabezados agrupados por las 5 áreas del manual, los 12 subcriterios detallados, datos de la sede, tópico oficial, mesa directiva, menciones y clasificación MONUPE II.</p>
             <button class="btn btn-prussian" onclick="exportarExcelOficial()">Descargar Excel Oficial (.xls)</button>
           </div>
           <div class="tip-card-item" style="border-left-color:var(--azure); padding:1.1rem;">
@@ -1080,29 +1098,36 @@
     </div>
   </div>
 
-  <!-- MODAL COMPARTIR ENLACE ÚNICO DE MESA -->
-  <div class="modal-box" id="shareModal">
+  <!-- MODAL GESTIÓN DE SALA (CREAR CÓDIGO ALEATORIO O UNIRSE CON CÓDIGO) -->
+  <div class="modal-box" id="roomHubModal">
     <div class="modal-content">
-      <h3 style="color:var(--prussian); margin-bottom:0.4rem;">🔗 Compartir Sala Única con Vicepresidencia</h3>
-      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.85rem;">
-        Este enlace pertenece exclusivamente a la sala <strong id="modalRoomLabel"></strong>. Otros modelos que se realicen hoy en otras salas no interferirán con estos datos.
+      <h3 style="color:var(--prussian); margin-bottom:0.35rem;">🔑 Gestión de Sala Colaborativa en Vivo</h3>
+      <p style="font-size:0.82rem; color:var(--text-muted);">
+        Cada comisión o modelo trabaja bajo su propio <strong>código aleatorio</strong> para que nunca se mezclen los datos si hay varios modelos el mismo día.
       </p>
 
-      <label style="font-size:0.75rem; font-weight:700; color:var(--dusk); display:block; margin-bottom:0.3rem;">1. Enlace de Trabajo Conjunto (Sincronizado vía Google Sheets):</label>
-      <div style="display:flex; gap:0.45rem; margin-bottom:0.9rem;">
-        <input type="text" id="shareSyncUrl" class="field-input" readonly style="margin:0; font-size:0.8rem;" />
-        <button class="btn btn-prussian" onclick="copiarTexto('shareSyncUrl')">Copiar</button>
+      <div style="margin-top:0.85rem; background:#f4faff; padding:0.9rem; border-radius:10px; border:1px solid var(--border-soft);">
+        <span style="font-size:0.75rem; font-weight:700; color:var(--dusk); text-transform:uppercase;">Tu Código de Sala Actual (Compártelo con tu Vicepresidente/a):</span>
+        <div class="room-code-big" id="hubCurrentCode">MON-0000</div>
+        <div style="display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
+          <button class="btn btn-prussian" onclick="copyRoomCode()">📋 Copiar Código</button>
+          <button class="btn btn-aqua" onclick="shareRoomWhatsApp()">📲 Enviar Código por WhatsApp</button>
+          <button class="btn btn-frosted" onclick="generateNewRandomRoom()">🎲 Generar Nuevo Código</button>
+        </div>
       </div>
 
-      <label style="font-size:0.75rem; font-weight:700; color:var(--dusk); display:block; margin-bottom:0.3rem;">2. Enlace Instantáneo con Datos Incrustados (Funciona directo en GitHub sin configurar Sheets):</label>
-      <div style="display:flex; gap:0.45rem; margin-bottom:1rem;">
-        <input type="text" id="shareSnapshotUrl" class="field-input" readonly style="margin:0; font-size:0.8rem;" />
-        <button class="btn btn-azure" onclick="copiarTexto('shareSnapshotUrl')">Copiar</button>
+      <div style="margin-top:1rem; padding-top:0.9rem; border-top:1px solid var(--border-soft);">
+        <label style="font-size:0.78rem; font-weight:800; color:var(--prussian); display:block; margin-bottom:0.35rem;">
+          ¿Eres Vicepresidente o Secretario? Únete a una sala existente:
+        </label>
+        <div style="display:flex; gap:0.5rem;">
+          <input type="text" id="joinCodeInput" class="field-input" placeholder="Ej. MON-4821" style="margin:0; text-transform:uppercase; font-weight:700; letter-spacing:1px;" />
+          <button class="btn btn-azure" onclick="joinExistingRoom()">Conectar a Sala</button>
+        </div>
       </div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <button class="btn btn-aqua" onclick="enviarLinkWhatsApp()">📲 Enviar Link por WhatsApp</button>
-        <button class="btn btn-frosted" onclick="closeModal('shareModal')">Cerrar</button>
+      <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
+        <button class="btn btn-frosted" onclick="closeModal('roomHubModal')">Listo / Cerrar</button>
       </div>
     </div>
   </div>
@@ -1122,24 +1147,6 @@
     </div>
   </div>
 
-  <!-- MODAL GOOGLE SHEETS -->
-  <div class="modal-box" id="sheetsModal">
-    <div class="modal-content">
-      <h3 style="color:var(--prussian); margin-bottom:0.5rem;">☁ Conexión Colaborativa con Google Sheets</h3>
-      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.75rem;">
-        Pega la URL de tu <strong>Google Apps Script</strong>. Al compartir el link de sala con tu Vicepresidente, la URL de conexión viaja incluida automáticamente para que ambos evalúen la misma sala en vivo.
-      </p>
-      <input type="url" id="scriptUrlInput" class="field-input" placeholder="https://script.google.com/macros/s/.../exec" />
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.85rem;">
-        <button class="btn btn-azure" onclick="pushToCloud(true)">Subir Estado Actual</button>
-        <div style="display:flex; gap:0.5rem;">
-          <button class="btn btn-frosted" onclick="closeModal('sheetsModal')">Cerrar</button>
-          <button class="btn btn-prussian" onclick="guardarUrlSheets()">Guardar URL</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script>
     // Registro Service Worker Offline
     if ('serviceWorker' in navigator) {
@@ -1149,21 +1156,48 @@
     }
 
     // =========================================================
-    // GESTIÓN DE SALA ÚNICA (?sala=MONUPE-XXXX) PARA GITHUB PAGES
+    // CATÁLOGO OFICIAL DE LAS 5 COMISIONES Y TÓPICOS EXACTOS
     // =========================================================
+    const OFFICIAL_TOPICS = {
+      "Asamblea General de las Naciones Unidas (AG)": "Cooperación internacional para garantizar el acceso equitativo de los jóvenes a las oportunidades educativas, sociales y económicas generadas por la inteligencia artificial.",
+      "Organización Mundial de la Salud (OMS)": "Impacto del uso creciente de la inteligencia artificial y las plataformas digitales en la salud mental y el bienestar de los jóvenes.",
+      "Programa de las Naciones Unidas para el Medio Ambiente (PNUMA)": "Impacto ambiental del crecimiento de la inteligencia artificial: consumo energético y uso de recursos naturales para el desarrollo de nuevas tecnologías.",
+      "Organización de las Naciones Unidas para la Educación, la Ciencia y la Cultura (UNESCO)": "Uso de la inteligencia artificial generativa en la educación: desafíos para el aprendizaje, la creatividad y el pensamiento crítico de los jóvenes.",
+      "Consejo Económico y Social de las Naciones Unidas (ECOSOC)": "El futuro del empleo juvenil ante el avance de la inteligencia artificial: medidas para garantizar la capacitación, inclusión y protección laboral de las nuevas generaciones."
+    };
+
+    // =========================================================
+    // GESTIÓN DE CÓDIGO DE SALA ALEATORIO Y SINCRONIZACIÓN EN VIVO
+    // =========================================================
+    const CLOUD_RELAY = 'https://kvdb.io/A2k9LmP7xQ4vR8nW3zB6yT'; // Almacén ligero por código de sala
     const urlParams = new URLSearchParams(window.location.search);
-    let roomId = urlParams.get('sala');
-    if (!roomId) {
-      roomId = 'MONUPE-' + Math.floor(1000 + Math.random() * 9000);
-      const newUrl = `${window.location.pathname}?sala=${roomId}`;
-      window.history.replaceState({}, '', newUrl);
+
+    function randomRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = 'MON-';
+      for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return code;
     }
-    document.getElementById('roomCodeBadge').textContent = `SALA: ${roomId}`;
-    const STORAGE_KEY = `monupe_manual_v3_${roomId}`;
 
-    const sharedApiUrl = urlParams.get('api') ? decodeURIComponent(urlParams.get('api')) : '';
+    let roomId = (urlParams.get('sala') || localStorage.getItem('monupe_last_room') || '').toUpperCase();
+    let isFirstVisit = false;
+    if (!roomId) {
+      roomId = randomRoomCode();
+      isFirstVisit = true;
+    }
+    localStorage.setItem('monupe_last_room', roomId);
+    window.history.replaceState({}, '', `${window.location.pathname}?sala=${encodeURIComponent(roomId)}`);
 
-    // 12 subcriterios exactos del Manual (28 + 22 + 16 + 16 + 18 = 100 pts)
+    function updateRoomBadges() {
+      document.getElementById('roomCodeBadge').textContent = `SALA: ${roomId}`;
+      document.getElementById('hubCurrentCode').textContent = roomId;
+    }
+    updateRoomBadges();
+
+    function getStorageKey() {
+      return `monupe_v4_room_${roomId}`;
+    }
+
     function createEmptyDelegate(idx) {
       return {
         id: Date.now() + idx + Math.random(),
@@ -1171,21 +1205,16 @@
         country: '',
         status: 'PV',
         rubric: {
-          // Conocimiento (28)
           redaccion: 0,      // 10
           investigacion: 0,  // 10
           representacion: 0, // 8
-          // Comunicación (22)
           oratoria: 0,       // 8
           argumentacion: 0,  // 8
           discurso: 0,       // 6
-          // Negociación (16)
           consenso: 0,       // 8
           conflictos: 0,     // 8
-          // Análisis (16)
           critico: 0,        // 10
           soluciones: 0,     // 6
-          // Interpersonales (18)
           liderazgo: 0,      // 8
           equipo: 0          // 10
         },
@@ -1194,38 +1223,25 @@
       };
     }
 
-    let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+    const defaultCommission = "Asamblea General de las Naciones Unidas (AG)";
+    let appData = JSON.parse(localStorage.getItem(getStorageKey())) || {
       roomId: roomId,
-      updatedAt: Date.now(),
+      updatedAt: 0,
+      lastEditor: '',
       meta: {
         centro: '',
-        comision: 'OMS — Organización Mundial de la Salud',
-        topico: '',
+        comision: defaultCommission,
+        topico: OFFICIAL_TOPICS[defaultCommission],
         presidente: '',
         vicepresidente: '',
         relator: '',
         horaInicio: '08:00',
         horaFin: ''
       },
-      delegates: Array.from({ length: 15 }, (_, i) => createEmptyDelegate(i)),
-      scriptUrl: sharedApiUrl || ''
+      delegates: Array.from({ length: 15 }, (_, i) => createEmptyDelegate(i))
     };
 
-    if (sharedApiUrl && !appData.scriptUrl) {
-      appData.scriptUrl = sharedApiUrl;
-    }
-
-    // Cargar estado si viene incrustado en #data=... (Modo 100% GitHub estático)
-    if (window.location.hash.startsWith('#data=')) {
-      try {
-        const encoded = window.location.hash.replace('#data=', '');
-        const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-        if (decoded && decoded.delegates) {
-          appData = { ...appData, ...decoded, roomId };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-        }
-      } catch (e) {}
-    }
+    const clientDeviceId = 'dev_' + Math.random().toString(36).slice(2, 9);
 
     function getSubtotals(d) {
       const r = d.rubric || {};
@@ -1238,95 +1254,127 @@
       return { conocimiento, comunicacion, negociacion, analisis, interpers, total };
     }
 
-    let syncDebounce = null;
-    function saveState(triggerCloud = true) {
+    let pushTimer = null;
+    function saveState(pushRemote = true) {
+      appData.roomId = roomId;
       appData.updatedAt = Date.now();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-      if (triggerCloud && appData.scriptUrl && navigator.onLine) {
-        document.getElementById('syncIndicator').textContent = 'Sincronizando...';
-        clearTimeout(syncDebounce);
-        syncDebounce = setTimeout(() => pushToCloud(false), 1200);
+      appData.lastEditor = clientDeviceId;
+      localStorage.setItem(getStorageKey(), JSON.stringify(appData));
+
+      if (pushRemote && navigator.onLine) {
+        clearTimeout(pushTimer);
+        pushTimer = setTimeout(() => pushRoomToCloud(), 650);
       }
     }
 
-    // =========================================================
-    // SINCRONIZACIÓN EN TIEMPO REAL POR SALA (PRESIDENCIA <-> VICE)
-    // =========================================================
-    async function pushToCloud(manualAlert = false) {
-      if (!navigator.onLine || !appData.scriptUrl) return;
+    async function pushRoomToCloud() {
+      if (!navigator.onLine) return;
       try {
-        await fetch(appData.scriptUrl, {
+        await fetch(`${CLOUD_RELAY}/${encodeURIComponent(roomId)}`, {
           method: 'POST',
-          mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'upsertRoom',
-            roomId: roomId,
-            payload: appData
-          })
+          body: JSON.stringify(appData)
         });
-        document.getElementById('syncIndicator').textContent = 'Sincronizado ✓';
-        if (manualAlert) alert('Datos de la sala subidos correctamente.');
-      } catch (e) {
-        document.getElementById('syncIndicator').textContent = 'Pendiente';
-      }
+      } catch (e) {}
     }
 
-    async function pullFromCloud(manualAlert = false) {
-      if (!navigator.onLine || !appData.scriptUrl) return;
+    async function pullRoomFromCloud(manual = false) {
+      if (!navigator.onLine) return;
       try {
-        const res = await fetch(`${appData.scriptUrl}?action=getRoom&roomId=${encodeURIComponent(roomId)}`);
-        const json = await res.json();
-        if (json && json.status === 'ok' && json.payload) {
-          const remote = json.payload;
-          if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
-            appData = { ...appData, ...remote };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        const res = await fetch(`${CLOUD_RELAY}/${encodeURIComponent(roomId)}?t=${Date.now()}`);
+        if (!res.ok) return;
+        const remote = await res.json();
+        if (remote && remote.delegates && remote.updatedAt > (appData.updatedAt || 0)) {
+          // Si otro miembro de la mesa actualizó los datos
+          if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
+            appData = remote;
+            localStorage.setItem(getStorageKey(), JSON.stringify(appData));
             loadMetaUI();
             renderRollCall();
             renderMatrixEval();
             renderRanking();
+            showLiveToast();
           }
-          document.getElementById('syncIndicator').textContent = 'Al día ✓';
-          if (manualAlert) alert('Datos actualizados desde la sala compartida.');
+        }
+        if (manual) {
+          showLiveToast('✓ Sala sincronizada');
         }
       } catch (e) {}
     }
 
+    function showLiveToast(text = '🔄 Actualizado por Mesa Directiva') {
+      const toast = document.getElementById('liveUpdateToast');
+      toast.textContent = text;
+      toast.style.display = 'inline-block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    // Sondeo automático cada 3.5 segundos para actualización en tiempo real entre Presidencia y Vicepresidencia
     setInterval(() => {
-      if (appData.scriptUrl && navigator.onLine) pullFromCloud(false);
-    }, 10000);
+      if (navigator.onLine) pullRoomFromCloud(false);
+    }, 3500);
 
-    function crearNuevaSala() {
-      if (!confirm('¿Deseas abrir una sala nueva e independiente para otro modelo o comisión?')) return;
-      const newRoom = 'MONUPE-' + Math.floor(1000 + Math.random() * 9000);
-      window.location.href = `${window.location.pathname}?sala=${newRoom}`;
+    function syncNowManual() {
+      pushRoomToCloud();
+      pullRoomFromCloud(true);
     }
 
-    function openShareModal() {
-      document.getElementById('modalRoomLabel').textContent = roomId;
-      const baseUrl = `${window.location.origin}${window.location.pathname}?sala=${encodeURIComponent(roomId)}`;
-      const syncUrl = appData.scriptUrl ? `${baseUrl}&api=${encodeURIComponent(appData.scriptUrl)}` : baseUrl;
-      document.getElementById('shareSyncUrl').value = syncUrl;
-
-      const compressed = btoa(unescape(encodeURIComponent(JSON.stringify(appData))));
-      document.getElementById('shareSnapshotUrl').value = `${baseUrl}#data=${compressed}`;
-      openModal('shareModal');
+    // Funciones del Modal de Salas
+    function openRoomHub() {
+      updateRoomBadges();
+      openModal('roomHubModal');
     }
 
-    function copiarTexto(inputId) {
-      const el = document.getElementById(inputId);
-      el.select();
-      navigator.clipboard.writeText(el.value);
-      alert('Enlace único de la sala copiado al portapapeles.');
+    function copyRoomCode() {
+      navigator.clipboard.writeText(roomId);
+      alert(`Código ${roomId} copiado. Tu Vicepresidente solo debe abrir la página, pulsar "Sala / Unirse con Código" y pegar ${roomId}.`);
     }
 
-    function enviarLinkWhatsApp() {
-      const link = appData.scriptUrl
-        ? document.getElementById('shareSyncUrl').value
-        : document.getElementById('shareSnapshotUrl').value;
-      const msg = `*SALA DE EVALUACIÓN COMPARTIDA — MONUPE II*\n*Comisión:* ${appData.meta.comision}\n*Código de Sala:* ${roomId}\n\nEntra desde tu laptop aquí para evaluar en conjunto:\n${link}`;
+    function shareRoomWhatsApp() {
+      const url = `${window.location.origin}${window.location.pathname}?sala=${encodeURIComponent(roomId)}`;
+      const msg = `*SALA DE EVALUACIÓN EN VIVO — MONUPE II*\n*Comisión:* ${appData.meta.comision}\n*Código de Sala:* *${roomId}*\n\nEntra directo aquí desde tu laptop para evaluar juntos:\n${url}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function generateNewRandomRoom() {
+      roomId = randomRoomCode();
+      localStorage.setItem('monupe_last_room', roomId);
+      window.history.replaceState({}, '', `${window.location.pathname}?sala=${encodeURIComponent(roomId)}`);
+      appData = {
+        roomId: roomId,
+        updatedAt: Date.now(),
+        lastEditor: clientDeviceId,
+        meta: {
+          centro: '',
+          comision: defaultCommission,
+          topico: OFFICIAL_TOPICS[defaultCommission],
+          presidente: '',
+          vicepresidente: '',
+          relator: '',
+          horaInicio: '08:00',
+          horaFin: ''
+        },
+        delegates: Array.from({ length: 15 }, (_, i) => createEmptyDelegate(i))
+      };
+      updateRoomBadges();
+      saveState(true);
+      loadMetaUI();
+      renderRollCall();
+      renderMatrixEval();
+      renderRanking();
+      alert(`Nueva sala creada con el código: ${roomId}`);
+    }
+
+    async function joinExistingRoom() {
+      const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+      if (!code) return;
+      roomId = code;
+      localStorage.setItem('monupe_last_room', roomId);
+      window.history.replaceState({}, '', `${window.location.pathname}?sala=${encodeURIComponent(roomId)}`);
+      updateRoomBadges();
+      appData.updatedAt = 0; // Forzar descarga del estado remoto de esa sala
+      await pullRoomFromCloud(true);
+      closeModal('roomHubModal');
     }
 
     // Red
@@ -1334,11 +1382,11 @@
       const el = document.getElementById('netStatus');
       if (navigator.onLine) {
         el.className = 'dot-indicator';
-        el.textContent = 'En línea';
-        if (appData.scriptUrl) pullFromCloud(false);
+        el.textContent = 'En línea (Sincronización en vivo)';
+        pullRoomFromCloud(false);
       } else {
         el.className = 'dot-indicator offline';
-        el.textContent = 'Sin internet (Guardando local)';
+        el.textContent = 'Sin internet (Guardado local)';
       }
     }
     window.addEventListener('online', checkOnlineStatus);
@@ -1437,6 +1485,15 @@
       syncMeta();
     }
 
+    // Cambio de Comisión -> Asigna Tópico Oficial Automáticamente
+    function onCommissionChange() {
+      const selectedCom = document.getElementById('cfgComision').value;
+      if (OFFICIAL_TOPICS[selectedCom]) {
+        document.getElementById('cfgTopico').value = OFFICIAL_TOPICS[selectedCom];
+      }
+      syncMeta();
+    }
+
     // Metadatos y Pase de Lista
     function syncMeta() {
       appData.meta.centro = document.getElementById('cfgCentro').value;
@@ -1447,13 +1504,13 @@
       appData.meta.relator = document.getElementById('cfgRelator').value;
       appData.meta.horaInicio = document.getElementById('horaInicio').value;
       appData.meta.horaFin = document.getElementById('horaFin').value;
-      saveState();
+      saveState(true);
     }
 
     function loadMetaUI() {
       document.getElementById('cfgCentro').value = appData.meta.centro || '';
-      document.getElementById('cfgComision').value = appData.meta.comision || 'OMS — Organización Mundial de la Salud';
-      document.getElementById('cfgTopico').value = appData.meta.topico || '';
+      document.getElementById('cfgComision').value = appData.meta.comision || defaultCommission;
+      document.getElementById('cfgTopico').value = appData.meta.topico || OFFICIAL_TOPICS[defaultCommission];
       document.getElementById('cfgPres').value = appData.meta.presidente || '';
       document.getElementById('cfgVice').value = appData.meta.vicepresidente || '';
       document.getElementById('cfgRelator').value = appData.meta.relator || '';
@@ -1466,39 +1523,39 @@
       const target = Math.min(60, Math.max(1, Number(document.getElementById('cfgCantidad').value) || 15));
       while (appData.delegates.length < target) appData.delegates.push(createEmptyDelegate(appData.delegates.length));
       if (appData.delegates.length > target) appData.delegates = appData.delegates.slice(0, target);
-      saveState();
+      saveState(true);
       renderRollCall();
     }
 
     function agregarFilaDelegado() {
       appData.delegates.push(createEmptyDelegate(appData.delegates.length));
       document.getElementById('cfgCantidad').value = appData.delegates.length;
-      saveState();
+      saveState(true);
       renderRollCall();
     }
 
     function eliminarDelegado(idx) {
       appData.delegates.splice(idx, 1);
       document.getElementById('cfgCantidad').value = appData.delegates.length;
-      saveState();
+      saveState(true);
       renderRollCall();
     }
 
     function updateDelegateField(idx, field, val) {
       appData.delegates[idx][field] = val;
-      saveState();
+      saveState(true);
       updateSpeakerDropdown();
     }
 
     function setAttendance(idx, status) {
       appData.delegates[idx].status = status;
-      saveState();
+      saveState(true);
       renderRollCall();
     }
 
     function marcarTodos(status) {
       appData.delegates.forEach(d => d.status = status);
-      saveState();
+      saveState(true);
       renderRollCall();
     }
 
@@ -1566,7 +1623,7 @@
         return item;
       });
       document.getElementById('cfgCantidad').value = appData.delegates.length;
-      saveState();
+      saveState(true);
       renderRollCall();
       closeModal('pasteModal');
     }
@@ -1583,7 +1640,7 @@
       appData.delegates[idx].rubric[field] = val;
       const subs = getSubtotals(appData.delegates[idx]);
       document.getElementById(`rowTotal_${idx}`).textContent = subs.total;
-      saveState();
+      saveState(true);
     }
 
     function renderMatrixEval() {
@@ -1598,24 +1655,23 @@
               <strong style="color:var(--prussian); display:block; font-size:0.82rem;">${d.name || `Delegado/a #${i + 1}`}</strong>
               <span style="font-size:0.73rem; color:var(--azure); font-weight:600;">${d.country || 'Sin país asignado'}</span>
             </td>
-            <!-- Conocimiento (28) -->
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="10" value="${r.redaccion}" oninput="updateMatrixScore(${i}, 'redaccion', 10, this)" /></td>
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="10" value="${r.investigacion}" oninput="updateMatrixScore(${i}, 'investigacion', 10, this)" /></td>
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="8" value="${r.representacion}" oninput="updateMatrixScore(${i}, 'representacion', 8, this)" /></td>
-            <!-- Comunicación (22) -->
+
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="8" value="${r.oratoria}" oninput="updateMatrixScore(${i}, 'oratoria', 8, this)" /></td>
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="8" value="${r.argumentacion}" oninput="updateMatrixScore(${i}, 'argumentacion', 8, this)" /></td>
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="6" value="${r.discurso}" oninput="updateMatrixScore(${i}, 'discurso', 6, this)" /></td>
-            <!-- Negociación (16) -->
+
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="8" value="${r.consenso}" oninput="updateMatrixScore(${i}, 'consenso', 8, this)" /></td>
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="8" value="${r.conflictos}" oninput="updateMatrixScore(${i}, 'conflictos', 8, this)" /></td>
-            <!-- Análisis (16) -->
+
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="10" value="${r.critico}" oninput="updateMatrixScore(${i}, 'critico', 10, this)" /></td>
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="6" value="${r.soluciones}" oninput="updateMatrixScore(${i}, 'soluciones', 6, this)" /></td>
-            <!-- Interpersonales (18) -->
+
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="8" value="${r.liderazgo}" oninput="updateMatrixScore(${i}, 'liderazgo', 8, this)" /></td>
             <td style="text-align:center;"><input type="number" class="score-cell-input" min="0" max="10" value="${r.equipo}" oninput="updateMatrixScore(${i}, 'equipo', 10, this)" /></td>
-            <!-- Total -->
+
             <td style="text-align:center; background:#e6f5ff;">
               <strong id="rowTotal_${i}" style="font-size:1.05rem; color:var(--prussian);">${subs.total}</strong>
             </td>
@@ -1627,7 +1683,7 @@
     // ================= RANKING, MENCIONES Y PASE MONUPE II =================
     function updateDelegateSelect(idx, field, val) {
       appData.delegates[idx][field] = val;
-      saveState();
+      saveState(true);
     }
 
     function renderRanking() {
@@ -1728,6 +1784,10 @@
               <td colspan="15">${appData.meta.comision || ''} (Sala: ${roomId})</td>
             </tr>
             <tr>
+              <td colspan="4" style="background:#E8F1FA;"><strong>Tópico Oficial:</strong></td>
+              <td colspan="15">${appData.meta.topico || ''}</td>
+            </tr>
+            <tr>
               <td colspan="4" style="background:#E8F1FA;"><strong>Mesa Directiva:</strong></td>
               <td colspan="15">Presidencia: ${appData.meta.presidente || ''} | Vicepresidencia: ${appData.meta.vicepresidente || ''} | Secretaría: ${appData.meta.relator || ''}</td>
             </tr>
@@ -1806,7 +1866,7 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         appData = JSON.parse(e.target.result);
-        saveState();
+        saveState(true);
         loadMetaUI();
         renderRollCall();
         renderMatrixEval();
@@ -1815,16 +1875,7 @@
       reader.readAsText(file);
     }
 
-    function guardarUrlSheets() {
-      appData.scriptUrl = document.getElementById('scriptUrlInput').value.trim();
-      saveState();
-      closeModal('sheetsModal');
-    }
-
-    function openModal(id) {
-      if (id === 'sheetsModal') document.getElementById('scriptUrlInput').value = appData.scriptUrl || '';
-      document.getElementById(id).classList.add('open');
-    }
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
     // Inicializar
@@ -1832,7 +1883,11 @@
     renderRollCall();
     renderMatrixEval();
     checkOnlineStatus();
-    saveState(false);
+    if (isFirstVisit) {
+      saveState(true);
+    } else {
+      pullRoomFromCloud(false);
+    }
   </script>
 </body>
 </html>
