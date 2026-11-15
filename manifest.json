@@ -1,0 +1,9 @@
+{
+  "name": "Sistema Oficial de Evaluación MONUPE II",
+  "short_name": "MONUPE Eval",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#002247",
+  "theme_color": "#002247",
+  "icons": []
+}
