@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1164,13 +1163,13 @@
       "Organización Mundial de la Salud (OMS)": "Impacto del uso creciente de la inteligencia artificial y las plataformas digitales en la salud mental y el bienestar de los jóvenes.",
       "Programa de las Naciones Unidas para el Medio Ambiente (PNUMA)": "Impacto ambiental del crecimiento de la inteligencia artificial: consumo energético y uso de recursos naturales para el desarrollo de nuevas tecnologías.",
       "Organización de las Naciones Unidas para la Educación, la Ciencia y la Cultura (UNESCO)": "Uso de la inteligencia artificial generativa en la educación: desafíos para el aprendizaje, la creatividad y el pensamiento crítico de los jóvenes.",
-      "Consejo Económico y Social de las Naciones Unidas (ECOSOC)": "El futuro del empleo juvenil ante el avance de la inteligencia artificial: medidas para garantizar la capacitación, inclusión y protección laboral de las nuevas generaciones."
+      "Consejo Económico y Social de las Naciones Unidas (ECOSOC)": "El futuro del empleo juvenil ante el avance de la inteligencia artificial: medidas para garantizar la capacitación, inclusión y protección laboral de los nuevas generaciones."
     };
 
     // =========================================================
-    // GESTIÓN DE CÓDIGO DE SALA ALEATORIO Y SINCRONIZACIÓN EN VIVO
+    // PUENTE GOOGLE APPS SCRIPT PARA SINCRONIZACIÓN EN VIVO
     // =========================================================
-    const CLOUD_RELAY = 'https://kvdb.io/A2k9LmP7xQ4vR8nW3zB6yT'; // Almacén ligero por código de sala
+    const CLOUD_RELAY ='https://script.google.com/macros/s/AKfycbwh5XuwfrKR01L3kUZzq9oNyRjeAiFvPnBgr9fa89Fgwv1zoMZCxbLhM1ChLHtIANih/exec';
     const urlParams = new URLSearchParams(window.location.search);
 
     function randomRoomCode() {
@@ -1264,29 +1263,29 @@
 
       if (pushRemote && navigator.onLine) {
         clearTimeout(pushTimer);
-        pushTimer = setTimeout(() => pushRoomToCloud(), 650);
+        pushTimer = setTimeout(() => pushRoomToCloud(), 500);
       }
     }
 
     async function pushRoomToCloud() {
-      if (!navigator.onLine) return;
+      if (!navigator.onLine || !CLOUD_RELAY.startsWith('http')) return;
       try {
-        await fetch(`${CLOUD_RELAY}/${encodeURIComponent(roomId)}`, {
+        await fetch(CLOUD_RELAY, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(appData)
         });
       } catch (e) {}
     }
 
     async function pullRoomFromCloud(manual = false) {
-      if (!navigator.onLine) return;
+      if (!navigator.onLine || !CLOUD_RELAY.startsWith('http')) return;
       try {
-        const res = await fetch(`${CLOUD_RELAY}/${encodeURIComponent(roomId)}?t=${Date.now()}`);
+        const res = await fetch(`${CLOUD_RELAY}?sala=${encodeURIComponent(roomId)}&t=${Date.now()}`);
         if (!res.ok) return;
         const remote = await res.json();
         if (remote && remote.delegates && remote.updatedAt > (appData.updatedAt || 0)) {
-          // Si otro miembro de la mesa actualizó los datos
           if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
             appData = remote;
             localStorage.setItem(getStorageKey(), JSON.stringify(appData));
@@ -1310,10 +1309,10 @@
       setTimeout(() => { toast.style.display = 'none'; }, 3500);
     }
 
-    // Sondeo automático cada 3.5 segundos para actualización en tiempo real entre Presidencia y Vicepresidencia
+    // Sondeo automático cada 3 segundos para actualización en tiempo real entre Presidencia y Vicepresidencia
     setInterval(() => {
       if (navigator.onLine) pullRoomFromCloud(false);
-    }, 3500);
+    }, 3000);
 
     function syncNowManual() {
       pushRoomToCloud();
@@ -1373,7 +1372,7 @@
       localStorage.setItem('monupe_last_room', roomId);
       window.history.replaceState({}, '', `${window.location.pathname}?sala=${encodeURIComponent(roomId)}`);
       updateRoomBadges();
-      appData.updatedAt = 0; // Forzar descarga del estado remoto de esa sala
+      appData.updatedAt = 0;
       await pullRoomFromCloud(true);
       closeModal('roomHubModal');
     }
